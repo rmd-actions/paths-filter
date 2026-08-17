@@ -74,9 +74,14 @@ For more scenarios see [examples](#examples) section.
 - It's recommended to quote your path expressions with `'` or `"`. Otherwise, you will get an error if it starts with `*`.
 - Local execution with [act](https://github.com/nektos/act) works only with alternative runner image. Default runner doesn't have `git` binary.
   - Use: `act -P ubuntu-latest=nektos/act-environments-ubuntu:18.04`
+- Git `dubious ownership` errors in [container jobs](https://docs.github.com/en/actions/using-containerized-services/running-jobs-in-a-container) are handled automatically -
+  the action retries with a temporary `HOME` containing a `safe.directory` entry, the same technique used by [actions/checkout](https://github.com/actions/checkout).
+  Only if fetching relies on credentials stored in `HOME`-relative files (e.g. `~/.git-credentials` or `~/.netrc`),
+  mark the repository as safe yourself in a step before this action: `git config --global --add safe.directory "$GITHUB_WORKSPACE"`
 
 ## What's New
 
+- Automatic workaround for git `dubious ownership` errors in container jobs
 - New major release `v4` after update to Node 24 [Breaking change]
 - Add `ref` input parameter
 - Add `list-files: csv` format
@@ -117,7 +122,8 @@ For more information, see [CHANGELOG](https://github.com/dorny/paths-filter/blob
     # introduced by the current branch are considered.
     # All files are considered as added if there is no common ancestor with
     # base branch or no previous commit.
-    # This option is ignored if action is triggered by pull_request event.
+    # This option is ignored if action is triggered by pull_request event,
+    # unless 'token' is set to an empty string (see the 'token' input below).
     # Default: repository default branch (e.g. master)
     base: ''
 
@@ -159,7 +165,9 @@ For more information, see [CHANGELOG](https://github.com/dorny/paths-filter/blob
     # It's only used if action is triggered by a pull request event.
     # GitHub token from workflow context is used as default value.
     # If an empty string is provided, the action falls back to detect
-    # changes using git commands.
+    # changes using git commands. In that case, on pull request events
+    # the 'base' input overrides the pull request base - e.g. set
+    # base: ${{ github.event.before }} to detect changes since the last push.
     # Default: ${{ github.token }}
     token: ''
 
@@ -182,10 +190,14 @@ For more information, see [CHANGELOG](https://github.com/dorny/paths-filter/blob
 
 ## Outputs
 
-- For each filter, it sets output variable named by the filter to the text:
-  - `'true'` - if **any** of changed files matches any of filter rules
-  - `'false'` - if **none** of changed files matches any of filter rules
-- For each filter, it sets an output variable with the name `${FILTER_NAME}_count` to the count of matching files.
+- Each filter sets an output variable, named after the filter, whose text value depends on the `predicate-quantifier` setting:
+  - With `predicate-quantifier: 'some'` (default):
+    - `'true'` - if **any** changed file matches **at least one** of the filter's rules
+    - `'false'` - if **no** changed file matches **at least one** of the filter's rules
+  - With `predicate-quantifier: 'every'`:
+    - `'true'` - if **any** changed file matches **all** of the filter's rules
+    - `'false'` - if **no** changed file matches **all** of the filter's rules
+- Each filter sets an output variable with the name `${FILTER_NAME}_count` to the count of matching files.
 - If enabled, for each filter it sets an output variable with the name `${FILTER_NAME}_files`. It will contain a list of all files matching the filter.
 - `changes` - JSON array with names of all filters matching any of the changed files.
 
