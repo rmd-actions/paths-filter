@@ -547,7 +547,7 @@ function csvEscape(value) {
     if (value === '')
         return value;
     // Only safe characters
-    if (/^[a-zA-Z0-9._+:@%/-]+$/m.test(value)) {
+    if (/^[a-zA-Z0-9._+:@%/-]+$/.test(value)) {
         return value;
     }
     // https://tools.ietf.org/html/rfc4180
@@ -579,12 +579,12 @@ function shellEscape(value) {
     if (value === '')
         return value;
     // Only safe characters
-    if (/^[a-zA-Z0-9,._+:@%/-]+$/m.test(value)) {
+    if (/^[a-zA-Z0-9,._+:@%/-]+$/.test(value)) {
         return value;
     }
     if (value.includes("'")) {
         // Only safe characters, single quotes and white-spaces
-        if (/^[a-zA-Z0-9,._+:@%/'\s-]+$/m.test(value)) {
+        if (/^[a-zA-Z0-9,._+:@%/'\s-]+$/.test(value)) {
             return `"${value}"`;
         }
         // Split by single quote and apply escaping recursively
